@@ -547,7 +547,7 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 		function get_buffer($pdf_file=''){
 		//---------------------
 			if($pdf_file == '') {
-				$buffer=implode("\n",$this->pdf_entries);
+				$buffer=implode("\n",$this->pdf_entries);				
 			}else {
 				$buffer=$this->getContent($pdf_file,'PDF');
 				//@unlink($pdf_file);
@@ -564,10 +564,14 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 		*@param string dest the destination
 		*@param string name the filename
 		**/
-		function Output($dest='', $name=''){
+		function Output($dest='', $name='', $cache_folder=''){
 		//-----------------------------------
 			
-			$pdf_file='';
+			$pdf_file='';			
+			$flatten_file = '';
+			if (empty($cache_folder)){
+				$cache_folder = FPDM_CACHE;
+			}
 			
 			if($this->support == "pdftk") {
 				//As PDFTK can only merge FDF files not data directly,
@@ -575,11 +579,10 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 				require_once("export/fdf/fdf.php"); //...conjointly with my patched/bridged forge_fdf that provides fdf file generation support from array data. 
 				require_once("export/pdf/pdftk.php");//Of course don't forget to bridge to PDFTK!
 
-				$tmp_file=false;
-				$pdf_file=resolve_path(fix_path(dirname(__FILE__).'/'.$this->pdf_source));      //string: full pathname to the input pdf , a form file
-				
+				$pdf_file=resolve_path(fix_path($this->pdf_source));      //string: full pathname to the input pdf , a form file
+				$uniqueid = rnunid();
 				if($this->fdf_source) { //FDF file provided
-					$fdf_file=resolve_path(fix_path(dirname(__FILE__).'/'.$this->fdf_source));
+					$fdf_file=resolve_path(fix_path($this->fdf_source));
 				}else {
 				
 					$pdf_url=getUrlfromDir($pdf_file); //Normaly http scheme not local file
@@ -590,7 +593,7 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 						$pdf_data=$this->fields;
 					}	
 					
-					$fdf_file=fix_path(FPDM_CACHE)."fields".rnunid().".fdf";
+					$fdf_file=fix_path($cache_folder)."fields".$uniqueid.".fdf";
 					$tmp_file=true;
 					$ret=output_fdf($pdf_url,$pdf_data,$fdf_file);
 					if(!$ret["success"])
@@ -615,19 +618,18 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 				if($this->compress_mode) $output_modes.=' compress';
 				if($this->uncompress_mode) $output_modes.=' uncompress';
 		
-				
-				$ret=pdftk($pdf_file,$fdf_file,array("security"=>$security,"output_modes"=>$output_modes));
+				$flatten_file = fix_path($cache_folder)."flatten".$uniqueid.".pdf";
+				$ret=pdftk($pdf_file,$fdf_file,array("security"=>$security,"output_modes"=>$output_modes), $flatten_file);
 				
 				if($tmp_file) @unlink($fdf_file); //Clear cache
 				
 				if($ret["success"]) {
-					$pdf_file=$ret["return"];
+					$pdf_file=$ret["return"];					
 				}else 
 					$this->Error($ret["return"]);
 			}
 			
-			//$this->buffer=$this->get_buffer($pdf_file);
-			
+			$buffer=$this->get_buffer($pdf_file);
 			
 			$dest=strtoupper($dest);
 			if($dest=='')
@@ -658,13 +660,13 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 						header('Content-Type: application/pdf');
 						if(headers_sent())
 							$this->Error('Some data has already been output, can\'t send PDF file');
-						header('Content-Length: '.strlen($this->get_buffer()));
+						header('Content-Length: '.strlen($buffer));
 						header('Content-Disposition: inline; filename="'.$name.'"');
 						header('Cache-Control: private, max-age=0, must-revalidate');
 						header('Pragma: public');
 						ini_set('zlib.output_compression','0');
 					}
-					echo $this->get_buffer();
+					echo $buffer;
 					break;
 				case 'D':
 					//Download file
@@ -673,7 +675,7 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 					header('Content-Type: application/x-download');
 					if(headers_sent())
 						$this->Error('Some data has already been output, can\'t send PDF file');
-					header('Content-Length: '.strlen($this->get_buffer()));
+					header('Content-Length: '.strlen($buffer));
 					header('Content-Disposition: attachment; filename="'.$name.'"');
 					
 					header("Expires: Mon, 26 Jul 1997 05:00:00 GMT"); // Date in the past
@@ -685,7 +687,7 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 					header('Cache-Control: private, max-age=0, must-revalidate');
 					header('Pragma: public,no-cache');
 					ini_set('zlib.output_compression','0');
-					echo $this->get_buffer();
+					echo $buffer;
 					break;
 				case 'F':
 					//Save to local file
@@ -694,15 +696,17 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 					if(!$f)
 						$this->Error('Unable to create output file: '.$name.' (currently opened under Acrobat Reader?)');
 						
-					fwrite($f,$this->get_buffer(),strlen($this->get_buffer()));
+					fwrite($f,$this->get_buffer(),strlen($buffer));
 					fclose($f);
 					break;
 				case 'S':
 					//Return as a string
-					return $this->get_buffer();
+					return $buffer;
 				default:
 					$this->Error('Incorrect output destination: '.$dest);
 			}
+			if($flatten_file) @unlink($flatten_file); //Clear cache
+
 			return '';
 		}
 

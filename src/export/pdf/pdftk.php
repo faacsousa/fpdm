@@ -67,11 +67,12 @@
 	*@param String settings 
 	*
 	*	Output modes 'compress', 'uncompress', 'flatten' ..(see pdftk --help)
+	*@param String output_file customize where the output pdf will be saved 
 	*@return Array an associative array with two keys: 
 	*	Boolean success a flag , if positive meaning the process is a success
 	*	String return the path to the pdf generated or the error message 
 	**/
-	function pdftk($pdf_file,$fdf_file,$settings) {
+	function pdftk($pdf_file,$fdf_file,$settings,$output_file = "") {
 	//------------------------------------------
 	
 		$descriptorspec = array(
@@ -90,18 +91,21 @@
 
 		if(is_windows()) {
 			$cmd="pdftk.exe"; //For windows
+			$dircmd=fix_path(dirname(__file__));
 		}else{
+			$dircmd='/usr/bin';
 			$cmd="pdftk"; //For linux and mac
 		}
 		
-		$dircmd=fix_path(dirname(__file__));
 		
 		if(file_exists("$dircmd/$cmd")) {
-		
-			$pdf_out=FPDM_CACHE."pdf_flatten.pdf";
+			if ($output_file){
+				$pdf_out=$output_file;
+			} else {
+				$pdf_out=FPDM_CACHE."pdf_flatten.pdf";
+			}
 			
-			$cmdline="$dircmd/$cmd \"$pdf_file\" fill_form \"$fdf_file\" output \"$pdf_out\" $output_modes $security"; //direct to ouptut	
-
+			$cmdline="$dircmd/$cmd \"$pdf_file\" fill_form \"$fdf_file\" output \"$pdf_out\" $output_modes $security"; //direct to ouptut				
 			//echo htmlentities("$cmdline , $descriptorspec, $cwd, $env");
 
 			if(PHP5_ENGINE) { // Php5
