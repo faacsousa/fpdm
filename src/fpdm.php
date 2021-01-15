@@ -672,7 +672,7 @@ if (!call_user_func_array('class_exists', $__tmp)) {
 					//Download file
 					if(ob_get_length())
 						$this->Error('Some data has already been output, can\'t send PDF file');
-					header('Content-Type: application/x-download');
+					header('Content-Type: application/octet-stream');
 					if(headers_sent())
 						$this->Error('Some data has already been output, can\'t send PDF file');
 					header('Content-Length: '.strlen($buffer));
