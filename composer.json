@@ -1,5 +1,5 @@
 {
-  "name": "tmw/fpdm",
+  "name": "faacsousa/fpdm",
   "description": "PDF form filling using FPDM Class written by FPDF author Olivier",
   "type": "library",
   "license": "MIT",
@@ -43,7 +43,7 @@
     "FPDF"
   ],
   "support": {
-    "issues": "https://github.com/codeshell/fpdm/issues",
-    "source": "https://github.com/codeshell/fpdm/tree/master"
+    "issues": "https://github.com/faacsousa/fpdm/issues",
+    "source": "https://github.com/faacsousa/fpdm/tree/master"
   }
 }
